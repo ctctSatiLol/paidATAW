@@ -1,0 +1,294 @@
+javascript:(function() {
+    if(!window.localStorage.atawKey) {
+        let inp = prompt(`whats the key? [REQUIRED]`);
+        if((Number(
+               `${Number(`0x${inp}`)}`
+                   .replaceAll(/2|5|7/g, ``)
+          ) % 10) !== 0) return;
+        else window.localStorage.atawKey = inp;
+    }
+    let defaultCommands = new Set([
+        `/cr`, `/rl`, `/hs`, `/dv`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/bc`, `/s`, `/cc`
+    ]);
+    let links = new Set([
+        `https://bloxd.io`,
+        `https://poxel.io`
+    ]);
+    let defaultSettings = {
+        hideTime: 30000, /* counts in ms */
+        trigColor: `rgba(255, 0, 0, 0.3)`
+    };
+    let commands = window.localStorage.commands ? JSON.parse(window.localStorage.commands) : {};
+    let settings = window.localStorage.settings ? JSON.parse(window.localStorage.settings) : defaultSettings;
+    if(!window.localStorage.settings) window.localStorage.settings = JSON.stringify(defaultSettings);
+    let lastUsedCommand = ``;
+    const toSpecialCode = text => 
+        text.substring(11, text.length)
+            .replace(/\bconsole\.log\b/g, `window.log`)
+            .replace(/\bconsole\.warn\b/g, `window.warn`)
+            .replace(/\bconsole\.error\b/g, `window.error`)
+            .replace(/\bconsole\.table\b/g, `window.table`);
+    const password = `696969*`;
+    const linkRegex = /^https:\/\//;
+    const cmdRegex = /^\//;
+    const linkCmdRegex = /^https:\/\/[a-zA-Z0-9_.]+\s\/.+/;
+    const ifr = document.createElement(`iframe`);
+    const linkIn = document.createElement(`input`);
+    const trig = document.createElement(`div`);
+    const cnsl = document.createElement(`p`);
+    const ifrContainer = document.createElement(`div`);
+    let prevLPTimeout;
+    let isLongPr = false;
+    ifrContainer.style.cssText = `position: fixed;top: 0;left: 0;width: 100%;height: 100%;object-fit: cover;z-index: 9999999; pointer-events: none;`;
+    cnsl.id = `satiCnsl`;
+    const isBlock = cond => cond ? `block` : `none`;
+    const bmarksMenu = document.createElement(`select`);
+    bmarksMenu.style.cssText = `position:fixed;z-index:9999997;top:95%;right:10%;`;
+    const bkmarks = window.localStorage.bookmarks || ``;
+    bkmarks.trim().split(` `).forEach(lk => {
+        const option = document.createElement(`option`);
+        option.textContent = lk;
+        option.value = lk;
+        bmarksMenu.append(option);
+    });
+    let prevTimer;
+    let prevZoomedIn;
+    /* styles */
+    trig.style.cssText = `position:fixed;bottom:10px;right:10px;width:30px;height:30px;background:${settings.trigColor};border-radius:50%;z-index:11111113;cursor:pointer;`;
+    
+    cnsl.style.cssText = `position:fixed;right:0px;width:120px;height:100vh;background-color:rgba(69,69,69,0.5);z-index:11111112;`;
+    /* resetting */
+    const datal = document.createElement(`datalist`);
+    datal.id = `theAutoCompl`;
+    let zoomedIn = false;
+    cnsl.style.display = `none`;
+    linkIn.type = `text`;
+    linkIn.style.cssText = `position:fixed;z-index:10000000;width:80%;height:5%;top:95%;`;
+    ifr.style.cssText = `width: 100%; height: 100%;border: none; pointer-events: auto`;
+    ifr.style.display = `none`;
+    ifrContainer.append(ifr);
+    document.body.append(ifrContainer, linkIn, trig, cnsl, bmarksMenu, datal);
+    linkIn.setAttribute(`list`, `theAutoCompl`);
+    /* yes i tried linkIn.list */
+    linkIn.autocomplete = `off`;
+    let enabled = false;
+    let inputHidden = false;
+    let dev = false;
+    let teacheraaa = false;
+    let checking = false;
+    links.forEach(link => {
+        const opti = document.createElement(`option`);
+        opti.textContent = link;
+        datal.append(opti);
+    });
+    defaultCommands.forEach(theCmd => {
+        const opti = document.createElement(`option`);
+        opti.textContent = theCmd;
+        datal.append(opti);
+    });
+    window.localStorage.bookmarks.split(` `).forEach(bkmark => {
+        if(bkmark) {
+            const opti = document.createElement(`option`);
+            opti.textContent = bkmark;
+            datal.append(opti);
+        }
+    });
+    const closeIfr = () => {
+        enabled = false;
+        ifr.style.display = `none`;
+    };
+    const runCommand = (text) => {
+        if(text === `/cr`) {
+            alert(`Main coding: Rustu\nOriginal Idea: Isaac`);
+        }
+        if(text === `/rl`) {
+            ifr.src = ifr.src;
+        }
+        if(text === `/hs`) {
+                        linkIn.style.display = `none`;
+                        inputHidden = true;
+        }
+        if(text === `/dv ${password}`) {
+            cnsl.style.display = `block`;
+            cnsl.innerText += `ur dev`;
+            dev = true;
+        }
+        if(text === `/tc`) {
+            cnsl.style.display = isBlock(cnsl.style.display === `none`);
+        }
+        if(text.split(` `)[0] === `/tr`) {
+            let params = text.split(` `);
+            ifr.style.opacity = Number(params[1]);
+        }
+        if(text.split(` `)[0] === `/bk`) {
+            let parts = text.split(` `);
+            const link = 
+                parts[1] ? parts[1] : linkIn.value.split(` `)[0];
+            window.localStorage.bookmarks += `${link} `;
+            const option = document.createElement(`option`);
+            option.textContent = link;
+            option.value = link;
+            bmarksMenu.append(option);
+            
+        }
+        if(text.split(` `)[0] === `/br`) {
+            let parts = text.split(` `);
+            const bkmarks = window.localStorage.bookmarks.trim();
+            let bkmarksArr = bkmarks.split(` `);
+            bkmarksArr = bkmarksArr.filter(lk => lk !== parts[1]);
+            window.localStorage.bookmarks = bkmarksArr.join(` `) + ` `;
+            document.querySelector(`option[value="${parts[1]}"]`)
+                .remove();
+        }
+        if(text === `/bc`) {
+            window.localStorage.bookmarks = ``;
+            bmarksMenu.innerHTML = ``;
+        }
+        if(text.split(` `)[0] === `/s`) {
+            const parts = text.split(` `);
+            const addThis = JSON.parse(window.localStorage.settings);
+            if(parts[1] === `htimer`) {
+                settings.hideTime = Number(parts[2]);
+                addThis.hideTime = Number(parts[2]);
+            }
+            if(parts[1] === `dcolor`) {
+                settings.trigColor = parts[2];
+                trig.style.background = parts[2];
+                addThis.trigColor = parts[2];
+            }
+            window.localStorage.settings = JSON.stringify(addThis);
+        }
+        if(text.split(` `)[0] === `/cc`) {
+            const parts = text.split(` `);
+            commands[parts[1]] = parts.slice(2, parts.length).join(` `);
+            const opt = document.createElement(`option`);
+            opt.textContent = `/${parts[1]}`;
+            datal.append(opt);
+            window.localStorage.commands = JSON.stringify(commands);
+        } else {
+            for(const [cmd, run] of Object.entries(commands)) {
+                if(text.split(` `)[0] === cmd) {
+                    let runCopy = run;
+                    text.split(` `).forEach((part, ind) => {
+                        runCopy = runCopy.replaceAll(`{${ind}}`, part);
+                    });
+                    if(linkRegex.test(runCopy)) {
+                        ifr.src = runCopy;
+                        enabled = true;
+                        ifr.style.display = `block`;
+                    } else if(cmdRegex.test(runCopy)) {
+                        runCommand(runCopy);
+                    } else if(linkCmdRegex.test(runCopy)) {
+                        const parts = runCopy.split(` `);
+                        ifr.src = parts[0];
+                        enabled = true;
+                        ifr.style.display = `block`;
+                        runCommand(parts.slice(1, parts.length).join(` `));
+                    }
+                }
+            }
+        }
+    };
+    const observer = new MutationObserver(mutList => {
+        mutList.forEach(mut => { 
+            if(mut.attributeName === `src`) {
+                (linkIn.value = `${mut.target.src} ${lastUsedCommand}`);
+                lastUsedCommand = ``;
+            }
+        });
+    });
+    const muterObserver = new MutationObserver(mutList => {
+        document.querySelectorAll(`audio,video`).forEach(e => {
+            e.muted = true;
+        });
+    });
+    observer.observe(ifr, { attributes: true } );
+    window.addEventListener(`load`, ev => {
+        document.querySelectorAll(`audio,video`).forEach(e => {
+            e.muted = true;
+        });
+        muterObserver.observe(document.body, { subtree: true } );
+    });
+    let prevAlpha;
+    bmarksMenu.addEventListener(`change`, ev => {
+        linkIn.value = ev.target.value;
+    });
+    trig.addEventListener(`click`, ev => {
+        if(isLongPr) {
+            isLongPr = false;
+            return;
+        }
+        isLongPr = false;
+        
+            if(inputHidden) { 
+                inputHidden = false;
+                linkIn.style.display = `block`;
+                return;
+            }
+            if(!enabled) {
+                if(linkIn.value[0] === `/`) {
+                    runCommand(linkIn.value);
+                } else if(linkIn.value !== `` &&
+                          linkIn.value.startsWith(`https://`)) {
+                    const parts = linkIn.value.split(` `);
+                    const baseLink = parts[0];
+                    const cmd = parts.slice(1, parts.length);
+                    if(parts[0] !== ifr.src) ifr.src = baseLink;
+                    ifr.style.display = `block`;
+                    enabled = true;
+                    ifr.focus();
+                    runCommand(cmd.join(` `));
+                    lastUsedCommand = cmd.join(` `);
+                } else if(linkIn.value.startsWith(`javascript:`) && dev) {
+                    try {
+                        const code = toSpecialCode(linkIn.value);
+                        cnsl.innerText += `\n<<<${code}`;
+                        cnsl.innerText += `\n>>>${eval(code)}`;
+                    } catch(err) { cnsl.innerText += `Error: ${err}`; }
+                }
+            } else {
+                ifr.style.display = `none`;
+                enabled = false;
+            } 
+        
+    });
+    document.body.addEventListener(`touchstart`, () => {});/*required*/
+    document.body.addEventListener(`touchend`, ev => {
+        if(enabled) {
+            if(prevTimer) clearTimeout(prevTimer);
+            prevTimer = setTimeout(closeIfr, settings.hideTime);
+        }
+    });
+    trig.addEventListener(`touchstart`, ev => {
+        isLongPr = false;
+        prevLPTimeout = setTimeout(() => { 
+            ifr.style.opacity = 0.4; 
+            isLongPr = true;
+        }, 300);
+    });
+    trig.addEventListener(`touchend`, ev => {
+        if(isLongPr) ifr.style.opacity = 1;
+        if(prevLPTimeout) clearTimeout(prevLPTimeout);
+    });
+    linkIn.addEventListener(`dblclick`, ev => {
+        
+    });
+    window.addEventListener(`gesturestart`, ev => enabled && ev.preventDefault(), true);
+    window.addEventListener(`gesturechange`, ev => enabled && ev.preventDefault(), true);
+    window.addEventListener(`gestureend`, ev => {
+        ev.preventDefault();
+        if(ev.rotation > 45 && !teacheraaa) {
+            teacheraaa = true;
+            ifr.style.display = linkIn.style.display = trig.style.display = bmarksMenu.style.display = `none`;
+            if(dev) cnsl.style.display = `none`;
+        }
+        if(ev.rotation < -45 && teacheraaa) {
+            enabled = true;
+            teacheraaa = false;
+            ifr.style.display = linkIn.style.display = trig.style.display = bmarksMenu.style.display = `block`;
+            ifr.focus();
+            if(dev) cnsl.style.display = `block`;
+        }
+    }, true);
+})();
