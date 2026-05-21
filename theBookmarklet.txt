@@ -8,7 +8,7 @@ javascript:(function() {
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/hs`, `/dv`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/hs`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -77,6 +77,8 @@ javascript:(function() {
     let dev = false;
     let teacheraaa = false;
     let checking = false;
+    let mouseInEdge = false;
+    let ifrHistory = [];
     links.forEach(link => {
         const opti = document.createElement(`option`);
         opti.textContent = link;
@@ -194,6 +196,7 @@ javascript:(function() {
         mutList.forEach(mut => { 
             if(mut.attributeName === `src`) {
                 (linkIn.value = `${mut.target.src} ${lastUsedCommand}`);
+                ifrHistory.push(mut.target.src);
                 lastUsedCommand = ``;
             }
         });
@@ -214,6 +217,22 @@ javascript:(function() {
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
     });
+    ifr.addEventListener(`touchstart`, ev => {
+        if(ev.clientX < 30) { 
+            ev.preventDefault();
+            ev.stopPropagation();
+            mouseInEdge = true;
+        }
+    }, true);
+    ifr.addEventListener(`touchend`, ev => {
+        if(mouseInEdge) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ifr.pop();
+            ifr.src = ifrHistory[ifrHistory.length - 2];
+            mouseInEdge = false;
+        }
+    }, true);
     trig.addEventListener(`click`, ev => {
         if(isLongPr) {
             isLongPr = false;
