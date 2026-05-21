@@ -126,7 +126,7 @@ javascript:(function() {
         opti.textContent = theCmd;
         datal.append(opti);
     });
-    window.localStorage.bookmarks.split(` `).forEach(bkmark => {
+    (window.localStorage.bookmarks || ``).split(` `).forEach(bkmark => {
         if(bkmark) {
             const opti = document.createElement(`option`);
             opti.textContent = bkmark;
@@ -155,6 +155,24 @@ javascript:(function() {
             cnsl.style.display = `block`;
             cnsl.innerText += `ur dev`;
             dev = true;
+        }
+        if(text === `/gk`) {
+            if(!dev) { 
+                alert(`poor you trying commands without dev`);
+                return;
+            }
+            const digs = [`0`, `3`, `6`, `9`];
+            let result = ``;
+            for(let i = 0; i <= 6; i++) {
+                result += digs[Math.floor(Math.random() * 4)];
+            }
+            result = result.slice(0, -1) + `0`;
+            let arr = result.split(``);
+            [2, 5, 7].forEach(num => {
+                arr.splice(Math.floor(Math.random() * result.length),
+                           0, `${num}`);
+            });
+            alert(Number(arr.join(``)).toString(16));
         }
         if(text === `/tc`) {
             cnsl.style.display = isBlock(cnsl.style.display === `none`);
