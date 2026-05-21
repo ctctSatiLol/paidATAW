@@ -1,4 +1,10 @@
 javascript:(function() {
+    if(!window.localStorage.notFirstUse) {
+        alert(`Welcome to ATAW!`);
+        alert(`Try typing a link in the input! Remember to add https://`);
+        alert(`type /cmds for all commands`);
+        window.localStorage.notFirstUse = `true`;
+    }
     if(!window.localStorage.atawKey) {
         let inp = prompt(`whats the key? [REQUIRED]`);
         if((Number(
@@ -8,7 +14,7 @@ javascript:(function() {
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/hs`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/hs`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -79,6 +85,37 @@ javascript:(function() {
     let checking = false;
     let mouseInEdge = false;
     let ifrHistory = [];
+    /* setup */
+    const observer = new MutationObserver(mutList => {
+        mutList.forEach(mut => { 
+            if(mut.attributeName === `src`) {
+                (linkIn.value = `${mut.target.src} ${lastUsedCommand}`);
+                ifrHistory.push(mut.target.src);
+                lastUsedCommand = ``;
+            }
+        });
+    });
+    const muterObserver = new MutationObserver(mutList => {
+        document.querySelectorAll(`audio,video`).forEach(e => {
+            e.muted = true;
+        });
+    });
+    observer.observe(ifr, { attributes: true } );
+    
+    document.querySelectorAll(`audio,video`).forEach(e => {
+        e.muted = true;
+    });
+    linkIn.style.display = `none`;
+    let el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 20);
+    linkIn.style.display = `block`;
+    let bg = getComputedStyle(el).backgroundColor;
+    while((bg === `transparent` || bg === `rgba(0, 0, 0, 0)`) &&
+           el.parentElement) {
+        el = el.parentElement;
+        bg = getComputedStyle(el).backgroundColor;
+    }
+    linkIn.style.backgroundColor = bg;
+    muterObserver.observe(document.body, { subtree: true } );
     links.forEach(link => {
         const opti = document.createElement(`option`);
         opti.textContent = link;
@@ -108,8 +145,11 @@ javascript:(function() {
             ifr.src = ifr.src;
         }
         if(text === `/hs`) {
-                        linkIn.style.display = `none`;
-                        inputHidden = true;
+            linkIn.style.display = `none`;
+            inputHidden = true;
+        }
+        if(text === `/cmds`) {
+            alert(`commands are: ${[...defaultCommands].join(`, `)}`);
         }
         if(text === `/dv ${password}`) {
             cnsl.style.display = `block`;
@@ -192,27 +232,6 @@ javascript:(function() {
             }
         }
     };
-    const observer = new MutationObserver(mutList => {
-        mutList.forEach(mut => { 
-            if(mut.attributeName === `src`) {
-                (linkIn.value = `${mut.target.src} ${lastUsedCommand}`);
-                ifrHistory.push(mut.target.src);
-                lastUsedCommand = ``;
-            }
-        });
-    });
-    const muterObserver = new MutationObserver(mutList => {
-        document.querySelectorAll(`audio,video`).forEach(e => {
-            e.muted = true;
-        });
-    });
-    observer.observe(ifr, { attributes: true } );
-    window.addEventListener(`load`, ev => {
-        document.querySelectorAll(`audio,video`).forEach(e => {
-            e.muted = true;
-        });
-        muterObserver.observe(document.body, { subtree: true } );
-    });
     let prevAlpha;
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
@@ -228,8 +247,8 @@ javascript:(function() {
         if(mouseInEdge) {
             ev.preventDefault();
             ev.stopPropagation();
-            ifr.pop();
-            ifr.src = ifrHistory[ifrHistory.length - 2];
+            ifrHistory.pop();
+            ifr.src = ifrHistory[ifrHistory.length - 1];
             mouseInEdge = false;
         }
     }, true);
