@@ -108,27 +108,27 @@
                     }
                     if(ifr.src.startsWith(`web.archive.org`)) {
                         linkIn.value = `ur actually not a brainless kid. Wow!`;
-                        setTimeout(() => linkIn.value = ``, 2000);
+                        setTimeout(() => linkIn.value = ifr.src, 2000);
                     }
                     /* the coding progression */
                     if(ifr.src.startsWith(`https://scratch.mit.edu`)) {
                         linkIn.value = `A start to ur coding journey!`;
                         setTimeout(() => linkIn.value = `Believe it or not, Even I started like this!`, 2000);
                         setTimeout(() => linkIn.value = `My recommendation after scratch is Python. I hope you can keep your interest in programming!`, 3000);
-                        setTimeout(() => linkIn.value = ``, 4000);
+                        setTimeout(() => linkIn.value = ifr.src, 4000);
                     }
                     if(ifr.src.startsWith(`https://github.com`)) {
                         linkIn.value = `I hope ur not just a script copier... But ur going into code! Good!`;
-                        setTimeout(() => linkIn.value = ``, 2000);
+                        setTimeout(() => linkIn.value = ifr.src, 2000);
                     }
                     if(ifr.src.startsWith(`https://stackoverflow.com`)) {
                         linkIn.value = `Dont worry, ur not stupid. Everyone goes through this.`;
-                        setTimeout(() => linkIn.value = ``, 3000);
+                        setTimeout(() => linkIn.value = ifr.src, 3000);
                     }
                     if(ifr.src.endsWith(`.js`)) {
                         linkIn.value = `oh nah bros looking at some source code`;
                         setTimeout(() => linkIn.value = `Wish the teacher can support you on ur coding journey!`, 2000);
-                        setTimeout(() => linkIn.value = ``, 3000);
+                        setTimeout(() => linkIn.value = ifr.src, 3000);
                     }
                 }
             }
@@ -284,6 +284,10 @@
         }
     };
     let prevAlpha;
+    ifr.addEventListener(`error`, ev => {
+        linkIn.value = `hmmm. Website didnt load. did u type da link wrong? yk my autocorrect isnt powered by chatgpt`;
+        setTimeout(() => linkIn.value = ifr.src, 3000);
+    });
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
     });
