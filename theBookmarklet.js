@@ -1,6 +1,6 @@
-javascript:(function() {
+(function() {
     if(!window.localStorage.notFirstUse) {
-        alert(`Welcome to ATAW!`);
+        alert(`Welcome to ATAW! The owner is 10 now on 22/5/2026 :)`);
         alert(`Try typing a link in the input! Remember to add https://`);
         alert(`type /cmds for all commands`);
         window.localStorage.notFirstUse = `true`;
@@ -14,7 +14,7 @@ javascript:(function() {
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/hs`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/hs`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -61,8 +61,8 @@ javascript:(function() {
     let prevTimer;
     let prevZoomedIn;
     /* styles */
-    trig.style.cssText = `position:fixed;bottom:10px;right:10px;width:30px;height:30px;background:${settings.trigColor};border-radius:50%;z-index:11111113;cursor:pointer;`;
-    
+    trig.style.cssText = `position:fixed;bottom:10px;right:10px;width:30px;height:30px;background:${settings.trigColor};border-radius:50%;z-index:11111113;cursor:pointer;touch-action:auto;`;
+    trig.textContent = `\u200b`;
     cnsl.style.cssText = `position:fixed;right:0px;width:120px;height:100vh;background-color:rgba(69,69,69,0.5);z-index:11111112;`;
     /* resetting */
     const datal = document.createElement(`datalist`);
@@ -70,7 +70,7 @@ javascript:(function() {
     let zoomedIn = false;
     cnsl.style.display = `none`;
     linkIn.type = `text`;
-    linkIn.style.cssText = `position:fixed;z-index:10000000;width:80%;height:5%;top:95%;`;
+    linkIn.style.cssText = `position:fixed;z-index:10000000;width:80%;height:5%;top:95%;background-color:rgba(255,255,255,0.3)`;
     ifr.style.cssText = `width: 100%; height: 100%;border: none; pointer-events: auto`;
     ifr.style.display = `none`;
     ifrContainer.append(ifr);
@@ -86,6 +86,13 @@ javascript:(function() {
     let mouseInEdge = false;
     let ifrHistory = [];
     /* setup */
+    setInterval(() => {
+        if(enabled) {
+            linkIn.value = `Hello World!`;
+            setTimeout(() => linkIn.value = ``, 2000);
+            if(ifr.src)
+        }
+    }, 2500);
     const observer = new MutationObserver(mutList => {
         mutList.forEach(mut => { 
             if(mut.attributeName === `src`) {
@@ -101,21 +108,10 @@ javascript:(function() {
         });
     });
     observer.observe(ifr, { attributes: true } );
-    
     document.querySelectorAll(`audio,video`).forEach(e => {
         e.muted = true;
     });
-    linkIn.style.display = `none`;
-    let el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 20);
-    linkIn.style.display = `block`;
-    let bg = getComputedStyle(el).backgroundColor;
-    while((bg === `transparent` || bg === `rgba(0, 0, 0, 0)`) &&
-           el.parentElement) {
-        el = el.parentElement;
-        bg = getComputedStyle(el).backgroundColor;
-    }
-    linkIn.style.backgroundColor = bg;
-    muterObserver.observe(document.body, { subtree: true } );
+    muterObserver.observe(document.body, { subtree: true, childList: true } );
     links.forEach(link => {
         const opti = document.createElement(`option`);
         opti.textContent = link;
@@ -126,7 +122,8 @@ javascript:(function() {
         opti.textContent = theCmd;
         datal.append(opti);
     });
-    (window.localStorage.bookmarks || ``).split(` `).forEach(bkmark => {
+    (typeof window.localStorage.bookmarks === `string` ?
+     window.localStorage.bookmarks : ``).split(` `).forEach(bkmark => {
         if(bkmark) {
             const opti = document.createElement(`option`);
             opti.textContent = bkmark;
@@ -147,6 +144,10 @@ javascript:(function() {
         if(text === `/hs`) {
             linkIn.style.display = `none`;
             inputHidden = true;
+        }
+        if(text.split(` `)[0] === `/r`) {
+            let parts = text.split(` `);
+            linkIn.value = ifrHistory[ifrHistory.length - Number(parts[1])];
         }
         if(text === `/cmds`) {
             alert(`commands are: ${[...defaultCommands].join(`, `)}`);
@@ -270,7 +271,7 @@ javascript:(function() {
             mouseInEdge = false;
         }
     }, true);
-    trig.addEventListener(`click`, ev => {
+    const trigCl = ev => {
         if(isLongPr) {
             isLongPr = false;
             return;
@@ -286,11 +287,18 @@ javascript:(function() {
                 if(linkIn.value[0] === `/`) {
                     runCommand(linkIn.value);
                 } else if(linkIn.value !== `` &&
-                          linkIn.value.startsWith(`https://`)) {
+                          (/^https[:;][/\\]{2}/).test(linkIn.value.substring(0, 8))) {
                     const parts = linkIn.value.split(` `);
-                    const baseLink = parts[0];
+                    const baseLink = parts[0]
+                    /* autocorrect */
+                    .replaceAll(`..`, `.`)
+                    .replaceAll(/\.(c|o|m){3}/g, `.com`)
+                    .replaceAll(/^https[:;][/\\]{2}/g, `https://`)
+                    .replaceAll(`.oi`, `.io`)
+                    .replaceAll(/\.(o|r|g){3}/g, `.org`);
                     const cmd = parts.slice(1, parts.length);
-                    if(parts[0] !== ifr.src) ifr.src = baseLink;
+                    linkIn.value = baseLink;
+                    if(baseLink !== ifr.src) ifr.src = baseLink;
                     ifr.style.display = `block`;
                     enabled = true;
                     ifr.focus();
@@ -308,7 +316,13 @@ javascript:(function() {
                 enabled = false;
             } 
         
+    };
+    linkIn.addEventListener(`keydown`, ev => {
+        if(ev.key === `Enter`) {
+            trigCl(null);
+        }
     });
+    trig.addEventListener(`click`, trigCl);
     document.body.addEventListener(`touchstart`, () => {});/*required*/
     document.body.addEventListener(`touchend`, ev => {
         if(enabled) {
@@ -316,20 +330,7 @@ javascript:(function() {
             prevTimer = setTimeout(closeIfr, settings.hideTime);
         }
     });
-    trig.addEventListener(`touchstart`, ev => {
-        isLongPr = false;
-        prevLPTimeout = setTimeout(() => { 
-            ifr.style.opacity = 0.4; 
-            isLongPr = true;
-        }, 300);
-    });
-    trig.addEventListener(`touchend`, ev => {
-        if(isLongPr) ifr.style.opacity = 1;
-        if(prevLPTimeout) clearTimeout(prevLPTimeout);
-    });
-    linkIn.addEventListener(`dblclick`, ev => {
-        
-    });
+    
     window.addEventListener(`gesturestart`, ev => enabled && ev.preventDefault(), true);
     window.addEventListener(`gesturechange`, ev => enabled && ev.preventDefault(), true);
     window.addEventListener(`gestureend`, ev => {
