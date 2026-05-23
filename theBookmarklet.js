@@ -266,6 +266,13 @@
                 trig.style.background = parts[2];
                 addThis.trigColor = parts[2];
             }
+            if(parts[1] === `vol`) {
+                settings.vol = Number(parts[2]) / 100;
+                document.querySelectorAll(`audio,video`).forEach(elem => {
+                    elem.volume = Number(parts[2]) / 100;
+                });
+                addThis.vol = Number(parts[2]) / 100;
+            }
             window.localStorage.settings = JSON.stringify(addThis);
         }
         if(text.split(` `)[0] === `/cc`) {
