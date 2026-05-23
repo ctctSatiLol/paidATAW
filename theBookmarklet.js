@@ -14,7 +14,7 @@
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/sh`, `/hs`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/sh`, `/hs`, `/m`, `/al`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -192,6 +192,10 @@
         if(text.split(` `)[0] === `/r`) {
             let parts = text.split(` `);
             linkIn.value = ifrHistory[ifrHistory.length - Number(parts[1])];
+        }
+        if(text.split(` `)[0] === `/m`) {
+            let parts = text.split(` `);
+            linkIn.value = eval(parts[1].replaceAll(`sqrt`, `Math.sqrt`).replaceAll(`pi`, `Math.PI`).replaceAll(`x`, `*`).replaceAll(`^`, `**`));
         }
         if(text === `/cmds`) {
             alert(`commands are: ${[...defaultCommands].join(`, `)}`);
