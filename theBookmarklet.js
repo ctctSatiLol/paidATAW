@@ -14,7 +14,7 @@
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/hs`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/sh`, `/hs`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -45,6 +45,7 @@
     const cnsl = document.createElement(`p`);
     const ifrContainer = document.createElement(`div`);
     let prevLPTimeout;
+    let loadTimeout;
     let isLongPr = false;
     ifrContainer.style.cssText = `position: fixed;top: 0;left: 0;width: 100%;height: 100%;object-fit: cover;z-index: 9999999; pointer-events: none;`;
     cnsl.id = `satiCnsl`;
@@ -93,6 +94,7 @@
                 ifrHistory.push(mut.target.src);
                 lastUsedCommand = ``;
                 if(enabled) {
+                    /* hiddenbot */
                     linkIn.value = `Hello World!`;
                     setTimeout(() => linkIn.value = ``, 2000);
                     if(ifr.src.startsWith(`https://bloxd.io`)) {
@@ -129,6 +131,10 @@
                         linkIn.value = `oh nah bros looking at some source code`;
                         setTimeout(() => linkIn.value = `Wish the teacher can support you on ur coding journey!`, 2000);
                         setTimeout(() => linkIn.value = ifr.src, 3000);
+                    }
+                    if(ifr.src.startsWith(`https://vscode.dev`)) {
+                        linkIn.value = `yes yes code!!! (just beware the extensions not working)`;
+                        setTimeout(() => linkIn.value = ifr.src, 3000);                        
                     }
                 }
             }
@@ -170,8 +176,14 @@
         if(text === `/cr`) {
             alert(`Main coding: Rustu\nOriginal Idea: Isaac`);
         }
+        if(text === `/sh`) {
+            navigator.clipboard.writeText(ifr.src);
+            linkIn.value = `Copied`;
+            setTimeout(() => linkIn.value = ifr.src, 500);
+        }
         if(text === `/rl`) {
             ifr.src = ifr.src;
+            linkIn.value = ifr.src;
         }
         if(text === `/hs`) {
             linkIn.style.display = `none`;
@@ -288,6 +300,7 @@
         linkIn.value = `hmmm. Website didnt load. did u type da link wrong? yk my autocorrect isnt powered by chatgpt`;
         setTimeout(() => linkIn.value = ifr.src, 3000);
     });
+    ifr.addEventListener(`load`, ev => linkIn.value = ifr.src);
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
     });
@@ -335,6 +348,7 @@
                     const cmd = parts.slice(1, parts.length);
                     linkIn.value = baseLink;
                     if(baseLink !== ifr.src) ifr.src = baseLink;
+                    linkIn.value = `the websites loading. bruh how bad is the school wifi lol`;
                     ifr.style.display = `block`;
                     enabled = true;
                     ifr.focus();
@@ -346,6 +360,9 @@
                         cnsl.innerText += `\n<<<${code}`;
                         cnsl.innerText += `\n>>>${eval(code)}`;
                     } catch(err) { cnsl.innerText += `Error: ${err}`; }
+                } else {
+                    linkIn.value = `bro is NOT getting away for typing random stuff (yes it works)`;
+                    setTimeout(() => linkIn.value = ``, 3000);
                 }
             } else {
                 ifr.style.display = `none`;
@@ -353,6 +370,11 @@
             } 
         
     };
+    bmarksMenu.addEventListener(`click`, ev => {
+        if(bmarksMenu.options.length === 0) {
+            linkIn.value = `do /bk after typing a link to add it to bookmarks (here)`;
+        }
+    });
     linkIn.addEventListener(`keydown`, ev => {
         if(ev.key === `Enter`) {
             trigCl(null);
