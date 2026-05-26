@@ -1,6 +1,6 @@
 (function() {
     if(!window.localStorage.notFirstUse) {
-        alert(`Welcome to ATAW! The owner is 10 now on 22/5/2026 :)`);
+        alert(`Welcome to ATAW! The owner is 10 now`); /* on 22/5/2026 */
         alert(`Try typing a link in the input! Remember to add https://`);
         alert(`type /cmds for all commands`);
         window.localStorage.notFirstUse = `true`;
@@ -14,7 +14,7 @@
         else window.localStorage.atawKey = inp;
     }
     let defaultCommands = new Set([
-        `/cr`, `/rl`, `/sh`, `/hs`, `/m`, `/al`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
+        `/cr`, `/rl`, `/sh`, `/hs`, `/m`, `/nh`, `/bp`, `/re`, `/n`, `/r`, `/cmds`, `/tc`, `/tr`, `/bk`, `/br`, 
         `/bc`, `/s`, `/cc`
     ]);
     let links = new Set([
@@ -25,6 +25,9 @@
         hideTime: 30000, /* counts in ms */
         trigColor: `rgba(255, 0, 0, 0.3)`
     };
+    let cmdTeach = [
+        `try /tr 0.5`, `do /rl to reload`, `do /sh to copy game link`, `/hs to hide input`, `/m is a calc`, `/nh lets u set no hide sessions`, `/bp lets u copy all settings`, `/re to restore settings from /bp`, `/n for notes`, `/cmds to see all cmds`, `/bk to add bookmark`, `/br to remove bookmark`, `/bc to clear all bookmarks`, `/s for settings`, `/cc to make custom commands`
+    ];
     let commands = window.localStorage.commands ? JSON.parse(window.localStorage.commands) : {};
     let settings = window.localStorage.settings ? JSON.parse(window.localStorage.settings) : defaultSettings;
     if(!window.localStorage.settings) window.localStorage.settings = JSON.stringify(defaultSettings);
@@ -47,6 +50,7 @@
     let prevLPTimeout;
     let loadTimeout;
     let isLongPr = false;
+    let loading = true;
     ifrContainer.style.cssText = `position: fixed;top: 0;left: 0;width: 100%;height: 100%;object-fit: cover;z-index: 9999999; pointer-events: none;`;
     cnsl.id = `satiCnsl`;
     const isBlock = cond => cond ? `block` : `none`;
@@ -62,23 +66,19 @@
     let prevTimer;
     let prevZoomedIn;
     /* styles */
-    trig.style.cssText = `position:fixed;bottom:10px;right:10px;width:30px;height:30px;background:${settings.trigColor};border-radius:50%;z-index:11111113;cursor:pointer;touch-action:auto;`;
+    trig.style.cssText = `position:fixed;bottom:10px;right:10px;width:30px;height:30px;background:${settings.trigColor};border-radius:50%;z-index:200000000;cursor:pointer;touch-action:auto;`;
     trig.textContent = `\u200b`;
     cnsl.style.cssText = `position:fixed;right:0px;width:120px;height:100vh;background-color:rgba(69,69,69,0.5);z-index:11111112;`;
     /* resetting */
-    const datal = document.createElement(`datalist`);
-    datal.id = `theAutoCompl`;
     let zoomedIn = false;
     cnsl.style.display = `none`;
     linkIn.type = `text`;
     linkIn.style.cssText = `position:fixed;z-index:10000000;width:80%;height:5%;top:95%;background-color:rgba(255,255,255,0.3)`;
-    ifr.style.cssText = `width: 100%; height: 100%;border: none; pointer-events: auto`;
+    ifr.style.cssText = `width: 100%; height: 100%;border: none; pointer-events: auto; transition: opacity 0.1s`;
     ifr.style.display = `none`;
     ifrContainer.append(ifr);
-    document.body.append(ifrContainer, linkIn, trig, cnsl, bmarksMenu, datal);
-    linkIn.setAttribute(`list`, `theAutoCompl`);
+    document.body.append(ifrContainer, linkIn, trig, cnsl, bmarksMenu);
     /* yes i tried linkIn.list */
-    linkIn.autocomplete = `off`;
     let enabled = false;
     let inputHidden = false;
     let dev = false;
@@ -98,18 +98,18 @@
                     linkIn.value = `Hello World!`;
                     setTimeout(() => linkIn.value = ``, 2000);
                     if(ifr.src.startsWith(`https://bloxd.io`)) {
-                        linkIn.value = `hmmm bloxd.io? Good choice! :D`;
+                        linkIn.value = `hmmm bloxd.io? Good choice! :D btw ${cmdTeach[Math.floor(Math.random() * cmdTeach.length)]}`;
                         setTimeout(() => {
                             linkIn.value = `just beware the brainrot... (Assuming your not a brainrot kid)`;
                         }, 1000);
-                        setTimeout(() => linkIn.value = ``, 3000);
+                        setTimeout(() => linkIn.value = ifr.src, 3000);
                     }
                     if(ifr.src.startsWith(`https://poxel.io`)) {
-                        linkIn.value = `no brainrot! Good choice!`;
-                        setTimeout(() => linkIn.value = ``, 2000);
+                        linkIn.value = `no brainrot! Good choice! btw ${cmdTeach[Math.floor(Math.random() * cmdTeach.length)]}`;
+                        setTimeout(() => linkIn.value = ifr.src, 2000);
                     }
                     if(ifr.src.startsWith(`web.archive.org`)) {
-                        linkIn.value = `ur actually not a brainless kid. Wow!`;
+                        linkIn.value = `ur actually not a brainless kid. Wow! btw ${cmdTeach[Math.floor(Math.random() * cmdTeach.length)]}`;
                         setTimeout(() => linkIn.value = ifr.src, 2000);
                     }
                     /* the coding progression */
@@ -138,6 +138,9 @@
                     }
                 }
             }
+            if(mut.attributeName === `style`) {
+                ifr.style.opacity = isBlock(mut.target.style.display) ? 1 : 0;
+            }
         });
     });
     const muterObserver = new MutationObserver(mutList => {
@@ -150,24 +153,6 @@
         e.muted = true;
     });
     muterObserver.observe(document.body, { subtree: true, childList: true } );
-    links.forEach(link => {
-        const opti = document.createElement(`option`);
-        opti.textContent = link;
-        datal.append(opti);
-    });
-    defaultCommands.forEach(theCmd => {
-        const opti = document.createElement(`option`);
-        opti.textContent = theCmd;
-        datal.append(opti);
-    });
-    (typeof window.localStorage.bookmarks === `string` ?
-     window.localStorage.bookmarks : ``).split(` `).forEach(bkmark => {
-        if(bkmark) {
-            const opti = document.createElement(`option`);
-            opti.textContent = bkmark;
-            datal.append(opti);
-        }
-    });
     const closeIfr = () => {
         enabled = false;
         ifr.style.display = `none`;
@@ -197,13 +182,72 @@
             let parts = text.split(` `);
             linkIn.value = eval(parts[1].replaceAll(`sqrt`, `Math.sqrt`).replaceAll(`pi`, `Math.PI`).replaceAll(`x`, `*`).replaceAll(`^`, `**`));
         }
+        if(text.split(` `)[0] === `/nh`) {
+            let parts = text.split(` `);
+            let addThis = window.localStorage.noHide ? JSON.parse(window.localStorage.noHide) : [];
+            let [, start, end] = parts;
+            let [startHr, startMin] = start.split(`:`).map(s => +s);
+            let [endHr, endMin] = end.split(`:`).map(s => +s);
+            if(parts[3] !== `del`) {
+                addThis.push({ 
+                    startTime: startHr * 60 + startMin,
+                    endTime: endHr * 60 + endMin
+                });
+            } else {
+                addThis = addThis.filter(d => 
+                                        (d.startTime !== startHr * 60 + startMin) &&
+                                        (d.endTime !== endHr * 60 + endMin));
+            }
+            window.localStorage.noHide = JSON.stringify(addThis);
+            linkIn.value = ``;
+        }
+        if(text === `/bp`) {
+            const backup = {
+                settings: window.localStorage.settings,
+                bookmarks: window.localStorage.bookmarks,
+                commands: window.localStorage.commands,
+                notes: window.localStorage.notes,
+                noHide: window.localStorage.noHide
+            };
+            navigator.clipboard.writeText(JSON.stringify(backup));
+            linkIn.value = `Copied backup!`;
+            setTimeout(() => linkIn.value = ifr.src, 2000);
+        }
+        if(text.split(` `)[0] === `/re`) {
+            let string = text.substring(4);
+            let obj = JSON.parse(string);
+            for(const [key, val] of Object.entries(obj)) {
+                window.localStorage[key] = val;
+            }
+            linkIn.value = `Restored backup!`;
+            setTimeout(() => linkIn.value = ifr.src, 2000);
+        }
+        if(text.split(` `)[0] === `/n`) {
+            let parts = text.split(` `);
+            let noteName = parts[1];
+            let noteContent = parts.length > 2 ? parts.slice(2, parts.length).join(` `) : undefined;
+            let addThis = window.localStorage.notes ? JSON.parse(window.localStorage.notes) : {};
+            if(!noteName) {
+                linkIn.value = `note names: ${Object.keys(addThis).join(`, `)}`;
+            }
+            if(noteContent) {
+                addThis[noteName] = noteContent;
+            } else {
+                linkIn.value = addThis[noteName] || `note not found. my code is probably correct, so set a note using /n <name> <note>`;
+            }
+            window.localStorage.notes = JSON.stringify(addThis);
+            setTimeout(() => linkIn.value = ``, 3000);
+        }
         if(text === `/cmds`) {
-            alert(`commands are: ${[...defaultCommands].join(`, `)}`);
+            alert(`commands are: 
+                   ${[...Object.keys(commands), ...defaultCommands].join(`, `)}`);
+            linkIn.value = ``;
         }
         if(text === `/dv ${password}`) {
             cnsl.style.display = `block`;
             cnsl.innerText += `ur dev`;
             dev = true;
+            linkIn.value = ``;
         }
         if(text === `/gk`) {
             if(!dev) { 
@@ -222,6 +266,7 @@
                            0, `${num}`);
             });
             alert(Number(arr.join(``)).toString(16));
+            linkIn.value = ``;
         }
         if(text === `/tc`) {
             cnsl.style.display = isBlock(cnsl.style.display === `none`);
@@ -229,17 +274,18 @@
         if(text.split(` `)[0] === `/tr`) {
             let params = text.split(` `);
             ifr.style.opacity = Number(params[1]);
+            linkIn.value = ``;
         }
         if(text.split(` `)[0] === `/bk`) {
             let parts = text.split(` `);
             const link = 
-                parts[1] ? parts[1] : linkIn.value.split(` `)[0];
+                parts[1] ? parts[1] : ifr.src;
             window.localStorage.bookmarks += `${link} `;
             const option = document.createElement(`option`);
             option.textContent = link;
             option.value = link;
             bmarksMenu.append(option);
-            
+            linkIn.value = ``;
         }
         if(text.split(` `)[0] === `/br`) {
             let parts = text.split(` `);
@@ -249,10 +295,12 @@
             window.localStorage.bookmarks = bkmarksArr.join(` `) + ` `;
             document.querySelector(`option[value="${parts[1]}"]`)
                 .remove();
+            linkIn.value = ``;
         }
         if(text === `/bc`) {
             window.localStorage.bookmarks = ``;
             bmarksMenu.innerHTML = ``;
+            linkIn.value = ``;
         }
         if(text.split(` `)[0] === `/s`) {
             const parts = text.split(` `);
@@ -274,14 +322,13 @@
                 addThis.vol = Number(parts[2]) / 100;
             }
             window.localStorage.settings = JSON.stringify(addThis);
+            linkIn.value = ``;
         }
         if(text.split(` `)[0] === `/cc`) {
             const parts = text.split(` `);
             commands[parts[1]] = parts.slice(2, parts.length).join(` `);
-            const opt = document.createElement(`option`);
-            opt.textContent = `/${parts[1]}`;
-            datal.append(opt);
             window.localStorage.commands = JSON.stringify(commands);
+            linkIn.value = ``;
         } else {
             for(const [cmd, run] of Object.entries(commands)) {
                 if(text.split(` `)[0] === cmd) {
@@ -304,6 +351,7 @@
                     }
                 }
             }
+            linkIn.value = ``;
         }
     };
     let prevAlpha;
@@ -311,7 +359,10 @@
         linkIn.value = `hmmm. Website didnt load. did u type da link wrong? yk my autocorrect isnt powered by chatgpt`;
         setTimeout(() => linkIn.value = ifr.src, 3000);
     });
-    ifr.addEventListener(`load`, ev => linkIn.value = ifr.src);
+    ifr.addEventListener(`load`, ev => {
+        linkIn.value = ifr.src;
+        loading = false;
+    });
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
     });
@@ -337,7 +388,8 @@
             return;
         }
         isLongPr = false;
-        
+            trig.style.opacity = 0.6;
+            setTimeout(() => trig.style.opacity = 1, 400);
             if(inputHidden) { 
                 inputHidden = false;
                 linkIn.style.display = `block`;
@@ -359,7 +411,7 @@
                     const cmd = parts.slice(1, parts.length);
                     linkIn.value = baseLink;
                     if(baseLink !== ifr.src) ifr.src = baseLink;
-                    linkIn.value = `the websites loading. bruh how bad is the school wifi lol`;
+                    linkIn.value = loading ? `the websites loading. bruh how bad is the school wifi lol` : ifr.src;
                     ifr.style.display = `block`;
                     enabled = true;
                     ifr.focus();
@@ -378,8 +430,8 @@
             } else {
                 ifr.style.display = `none`;
                 enabled = false;
+                linkIn.value = ifr.src;
             } 
-        
     };
     bmarksMenu.addEventListener(`click`, ev => {
         if(bmarksMenu.options.length === 0) {
@@ -394,7 +446,12 @@
     trig.addEventListener(`click`, trigCl);
     document.body.addEventListener(`touchstart`, () => {});/*required*/
     document.body.addEventListener(`touchend`, ev => {
-        if(enabled) {
+        const noHideArr = JSON.parse(window.localStorage.noHide || `[]`);
+        const cur = new Date();
+        const curMins = cur.getHours() * 60 + cur.getMinutes();
+        if(enabled && !(noHideArr.some(obj => 
+                         (obj.startTime <= curMins) &&
+                         (obj.endTime >= curMins)))) {
             if(prevTimer) clearTimeout(prevTimer);
             prevTimer = setTimeout(closeIfr, settings.hideTime);
         }
