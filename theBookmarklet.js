@@ -160,6 +160,7 @@
     };
     let scriptTrigCl = () => {};
     let scriptIfrLd = () => {};
+    const scriptVars = {};
     const parse = (script) => {
        let decls = script.split(`;`);
        let addThis = scriptCommands;
@@ -172,9 +173,37 @@
                                  if(first && second) 
                                      return (first + Math.floor(Math.random() * (second - first + 1)));
                                  else if(first) 
-                                     return Math.floor(Math.random() * first));
+                                     return Math.floor(Math.random() * first);
                                  else return Math.random();
-                             });
+                             }).matchAll(/\w+\s?=\s?.+/g).forEach(varStr => {
+                                 let [varName, val] = varStr.replaceAll(` `, ``).split(`=`);
+                                 scriptVars[varName] = Number.isNaN(+val) ? val : +val;
+                                 let theVar = scriptVars[varName];
+                                 if(scriptVars[varName][0] === `(`) {
+                                     theVar[0] = `[`;
+                                     theVar[theVar.length - 1] = `]`;
+                                     scriptVars[varName] = JSON.parse(theVar);
+                                 }
+                             }));
+       for(const [varName, val] of Object.entries(scriptVars)) {
+           if(!(val.startsWith(`(`) && val.endsWith(`)`))) {
+               decls = decls.map(decl => decl.replaceAll(`$${varName}`, val));
+           } else {
+               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\(\\d+\\)`), text => val[+(text.split(`(`)[1].split(`)`)[0])]));
+           }
+       }
+       decls.forEach(decl => {
+           if(decl.includes(`?`)) {
+               let cond = decl.split(`?`)[0];
+               let theRest = decl.split(`?`).slice(1, decl.length).join(`?`);
+               let [trueAction, falseAction] = theRest.split(` else `);
+               if(eval(cond)) {
+                   trueAction.split(`+`).forEach(cmd => runCommand(cmd));
+               } else if(falseAction) {
+                   falseAction.split(`+`).forEach(cmd => runCommand(cmd));
+               }
+           }
+       });
        decls.forEach(decl => {
            let parts = decl.split(`=>`);
            let [commandName, content] = parts.map(st => st.trim());
@@ -361,6 +390,7 @@
         }
         if(text.split(` `)[0] === `/sc`) {
             let content = text.split(` `).slice(1, text.length);
+            if(!scriptVars.bkmarks) runCommand(`/sc bkmarks = (${bkmarks.replaceAll(` `, `,`)})`);
             parse(content.join(` `));
         }
         if(text.split(` `)[0] === `/cc`) {
