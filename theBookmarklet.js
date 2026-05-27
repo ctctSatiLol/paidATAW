@@ -165,7 +165,7 @@
        let decls = script.split(`;`);
        let addThis = scriptCommands;
        decls = decls.filter(decl => decl !== ``)
-                    .map(decl => 
+                    .map(decl => {
                              decl.replaceAll(/rand\([0-9,]*\)/, 
                                              text => {
                                  let parts = text.substring(5, text.length - 1).split(`,`);
@@ -178,18 +178,23 @@
                              }).matchAll(/\w+\s?=\s?.+/g).forEach(varStr => {
                                  let [varName, val] = varStr.replaceAll(` `, ``).split(`=`);
                                  scriptVars[varName] = Number.isNaN(+val) ? val : +val;
-                                 let theVar = scriptVars[varName];
-                                 if(scriptVars[varName][0] === `(`) {
-                                     theVar[0] = `[`;
-                                     theVar[theVar.length - 1] = `]`;
-                                     scriptVars[varName] = JSON.parse(theVar);
-                                 }
-                             }));
+                             });
+                             return decl.replaceAll(/rand\([0-9,]*\)/, 
+                                             text => {
+                                 let parts = text.substring(5, text.length - 1).split(`,`);
+                                 let [first, second] = parts.map(x => +x);
+                                 if(first && second) 
+                                     return (first + Math.floor(Math.random() * (second - first + 1)));
+                                 else if(first) 
+                                     return Math.floor(Math.random() * first);
+                                 else return Math.random();
+                             });
+                         });
        for(const [varName, val] of Object.entries(scriptVars)) {
            if(!(val.startsWith(`(`) && val.endsWith(`)`))) {
                decls = decls.map(decl => decl.replaceAll(`$${varName}`, val));
            } else {
-               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\(\\d+\\)`), text => val[+(text.split(`(`)[1].split(`)`)[0])]));
+               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\([^)]+\\)`), text => val.split(` `)[+(text.split(`(`)[1].split(`)`)[0])]));
            }
        }
        decls.forEach(decl => {
@@ -391,6 +396,14 @@
         if(text.split(` `)[0] === `/sc`) {
             let content = text.split(` `).slice(1, text.length);
             if(!scriptVars.bkmarks) runCommand(`/sc bkmarks = (${bkmarks.replaceAll(` `, `,`)})`);
+            if(text.split(` `).length >= 2) {
+                let parts = text.split(` `);
+                if(parts[1] === `imp`) {
+                    let code = parts.slice(2, parts.length).join(` `);
+                    parse(code);
+                    return;
+                }
+            }
             parse(content.join(` `));
         }
         if(text.split(` `)[0] === `/cc`) {
