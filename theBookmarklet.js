@@ -29,6 +29,7 @@
         `try /tr 0.5`, `do /rl to reload`, `do /sh to copy game link`, `/hs to hide input`, `/m is a calc`, `/nh lets u set no hide sessions`, `/bp lets u copy all settings`, `/re to restore settings from /bp`, `/n for notes`, `/cmds to see all cmds`, `/bk to add bookmark`, `/br to remove bookmark`, `/bc to clear all bookmarks`, `/s for settings`, `/cc to make custom commands`
     ];
     let commands = window.localStorage.commands ? JSON.parse(window.localStorage.commands) : {};
+    let scriptCommands = window.localStorage.scriptCommands ? JSON.parse(window.localStorage.scriptCommands) : {};
     let settings = window.localStorage.settings ? JSON.parse(window.localStorage.settings) : defaultSettings;
     if(!window.localStorage.settings) window.localStorage.settings = JSON.stringify(defaultSettings);
     let lastUsedCommand = ``;
@@ -156,6 +157,40 @@
     const closeIfr = () => {
         enabled = false;
         ifr.style.display = `none`;
+    };
+    let scriptTrigCl = () => {};
+    let scriptIfrLd = () => {};
+    const parse = (script) => {
+       let decls = script.split(`;`);
+       let addThis = scriptCommands;
+       decls = decls.filter(decl => decl !== ``)
+                    .map(decl => 
+                             decl.replaceAll(/rand\([0-9,]*\)/, 
+                                             text => {
+                                 let parts = text.substring(5, text.length - 1).split(`,`);
+                                 let [first, second] = parts.map(x => +x);
+                                 if(first && second) 
+                                     return (first + Math.floor(Math.random() * (second - first + 1)));
+                                 else if(first) 
+                                     return Math.floor(Math.random() * first));
+                                 else return Math.random();
+                             });
+       decls.forEach(decl => {
+           let parts = decl.split(`=>`);
+           let [commandName, content] = parts.map(st => st.trim());
+           addThis[commandName] = content;
+           if(commandName === `ontrigclick`) {
+               scriptTrigCl = () => {
+                   content.split(`+`).forEach(cmd => runCommand(cmd));
+               };
+           }
+           if(commandName === `onload`) {
+               scriptIfrLd = () => {
+                   content.split(`+`).forEach(cmd => runCommand(cmd));
+               };
+           }
+       });
+       window.localStorage.scriptCommands = JSON.stringify(addThis);
     };
     const runCommand = (text) => {
         if(text === `/cr`) {
@@ -324,6 +359,10 @@
             window.localStorage.settings = JSON.stringify(addThis);
             linkIn.value = ``;
         }
+        if(text.split(` `)[0] === `/sc`) {
+            let content = text.split(` `).slice(1, text.length);
+            parse(content.join(` `));
+        }
         if(text.split(` `)[0] === `/cc`) {
             const parts = text.split(` `);
             commands[parts[1]] = parts.slice(2, parts.length).join(` `);
@@ -351,6 +390,23 @@
                     }
                 }
             }
+            for(const [cmd, run] of Object.entries(scriptCommands)) {
+                run.split(`+`).forEach(cmd => {
+                  if(linkRegex.test(cmd)) {
+                      ifr.src = cmd;
+                      enabled = true;
+                      ifr.style.display = `block`;
+                  } else if(cmdRegex.test(cmd)) {
+                      runCommand(cmd);
+                  } else if(linkCmdRegex.test(cmd)) {
+                      const parts = cmd.split(` `);
+                      ifr.src = parts[0];
+                      enabled = true;
+                      ifr.style.display = `block`;
+                      runCommand(parts.slice(1, parts.length).join(` `));
+                  }
+                });
+            }
             linkIn.value = ``;
         }
     };
@@ -362,6 +418,7 @@
     ifr.addEventListener(`load`, ev => {
         linkIn.value = ifr.src;
         loading = false;
+        scriptIfrLd();
     });
     bmarksMenu.addEventListener(`change`, ev => {
         linkIn.value = ev.target.value;
@@ -403,11 +460,12 @@
                     const parts = linkIn.value.split(` `);
                     const baseLink = parts[0]
                     /* autocorrect */
-                    .replaceAll(`..`, `.`)
-                    .replaceAll(/\.(c|o|m){3}/g, `.com`)
-                    .replaceAll(/^https[:;][/\\]{2}/g, `https://`)
-                    .replaceAll(`.oi`, `.io`)
-                    .replaceAll(/\.(o|r|g){3}/g, `.org`);
+                        .replaceAll(`..`, `.`)
+                        .replaceAll(/\.(c|o|m){3}/g, `.com`)
+                        .replaceAll(/^w[:;]/, `https://`)
+                        .replaceAll(/^https[:;][/\\]{2}/g, `https://`)
+                        .replaceAll(`.oi`, `.io`)
+                        .replaceAll(/\.(o|r|g){3}/g, `.org`);
                     const cmd = parts.slice(1, parts.length);
                     linkIn.value = baseLink;
                     if(baseLink !== ifr.src) ifr.src = baseLink;
@@ -431,7 +489,8 @@
                 ifr.style.display = `none`;
                 enabled = false;
                 linkIn.value = ifr.src;
-            } 
+            }
+        scriptTrigCl();
     };
     bmarksMenu.addEventListener(`click`, ev => {
         if(bmarksMenu.options.length === 0) {
