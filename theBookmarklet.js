@@ -93,6 +93,7 @@
             if(mut.attributeName === `src`) {
                 (linkIn.value = `${mut.target.src} ${lastUsedCommand}`);
                 ifrHistory.push(mut.target.src);
+                scriptVars.ifrValue = ifr.src;
                 lastUsedCommand = ``;
                 if(enabled) {
                     /* hiddenbot */
@@ -166,7 +167,8 @@
        let addThis = scriptCommands;
        decls = decls.filter(decl => decl !== ``)
                     .map(decl => {
-                             decl.replaceAll(/rand\([0-9,]*\)/, 
+                             let returnThis = decl.replaceAll(/\*.*\*/g, ``)
+                                 .replaceAll(/rand\([0-9,]*\)/g, 
                                              text => {
                                  let parts = text.substring(5, text.length - 1).split(`,`);
                                  let [first, second] = parts.map(x => +x);
@@ -175,41 +177,21 @@
                                  else if(first) 
                                      return Math.floor(Math.random() * first);
                                  else return Math.random();
-                             }).matchAll(/\w+\s?=\s?.+/g).forEach(varStr => {
-                                 let [varName, val] = varStr.replaceAll(` `, ``).split(`=`);
-                                 scriptVars[varName] = Number.isNaN(+val) ? val : +val;
-                             });
-                             return decl.replaceAll(/rand\([0-9,]*\)/, 
-                                             text => {
-                                 let parts = text.substring(5, text.length - 1).split(`,`);
-                                 let [first, second] = parts.map(x => +x);
-                                 if(first && second) 
-                                     return (first + Math.floor(Math.random() * (second - first + 1)));
-                                 else if(first) 
-                                     return Math.floor(Math.random() * first);
-                                 else return Math.random();
-                             });
+                                 });
+                                 returnThis.matchAll(/\w+\s?=\s?.+/g).forEach(varStr => {
+                                     let [varName, val] = varStr[0].replaceAll(` `, ``).split(`=`);
+                                     scriptVars[varName] = Number.isNaN(+val) ? val : +val;
+                                 });
+                             return returnThis;
                          });
        for(const [varName, val] of Object.entries(scriptVars)) {
            if(!(val.startsWith(`(`) && val.endsWith(`)`))) {
                decls = decls.map(decl => decl.replaceAll(`$${varName}`, val));
            } else {
-               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\([^)]+\\)`), text => val.split(` `)[+(text.split(`(`)[1].split(`)`)[0])]));
+               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\([^)]+\\)`, `g`), text => val.split(` `)[+(text.split(`(`)[1].split(`)`)[0])]));
            }
        }
-       decls.forEach(decl => {
-           if(decl.includes(`?`)) {
-               let cond = decl.split(`?`)[0];
-               let theRest = decl.split(`?`).slice(1, decl.length).join(`?`);
-               let [trueAction, falseAction] = theRest.split(` else `);
-               if(eval(cond)) {
-                   trueAction.split(`+`).forEach(cmd => runCommand(cmd));
-               } else if(falseAction) {
-                   falseAction.split(`+`).forEach(cmd => runCommand(cmd));
-               }
-           }
-       });
-       decls.forEach(decl => {
+       decls.forEach((decl, ind) => {
            let parts = decl.split(`=>`);
            let [commandName, content] = parts.map(st => st.trim());
            addThis[commandName] = content;
@@ -223,7 +205,19 @@
                    content.split(`+`).forEach(cmd => runCommand(cmd));
                };
            }
+           if(content.includes(`?`)) {
+               let decl = content;
+               let cond = decl.split(`?`)[0];
+               let theRest = decl.split(`?`).slice(1, decl.length).join(`?`);
+               let [trueAction, falseAction] = theRest.split(` else `);
+               if(eval(cond)) {
+                   addThis[commandName] = trueAction.trim();
+               } else if(falseAction) {
+                   addThis[commandName] = falseAction.trim();
+               }
+           }
        });
+       
        window.localStorage.scriptCommands = JSON.stringify(addThis);
     };
     const runCommand = (text) => {
@@ -395,15 +389,7 @@
         }
         if(text.split(` `)[0] === `/sc`) {
             let content = text.split(` `).slice(1, text.length);
-            if(!scriptVars.bkmarks) runCommand(`/sc bkmarks = (${bkmarks.replaceAll(` `, `,`)})`);
-            if(text.split(` `).length >= 2) {
-                let parts = text.split(` `);
-                if(parts[1] === `imp`) {
-                    let code = parts.slice(2, parts.length).join(` `);
-                    parse(code);
-                    return;
-                }
-            }
+            if(!scriptVars.bkmarks) scriptVars.bkmarks = bkmarks;
             parse(content.join(` `));
         }
         if(text.split(` `)[0] === `/cc`) {
@@ -411,6 +397,10 @@
             commands[parts[1]] = parts.slice(2, parts.length).join(` `);
             window.localStorage.commands = JSON.stringify(commands);
             linkIn.value = ``;
+        }
+        if(text.startsWith(`al(`)) { /* functions that have no return */
+            alert(text.slice(3, -1));
+            return;
         } else {
             for(const [cmd, run] of Object.entries(commands)) {
                 if(text.split(` `)[0] === cmd) {
@@ -448,6 +438,7 @@
                       ifr.style.display = `block`;
                       runCommand(parts.slice(1, parts.length).join(` `));
                   }
+                  if(cmd.startsWith(`al(`)) alert(cmd.slice(3, -1)); 
                 });
             }
             linkIn.value = ``;
@@ -496,7 +487,7 @@
                 return;
             }
             if(!enabled) {
-                if(linkIn.value[0] === `/`) {
+                if(linkIn.value[0] === `/` || linkIn.value.startsWith(`al(`)) {
                     runCommand(linkIn.value);
                 } else if(linkIn.value !== `` &&
                           (/^https[:;][/\\]{2}/).test(linkIn.value.substring(0, 8))) {
