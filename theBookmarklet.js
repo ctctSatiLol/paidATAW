@@ -161,10 +161,14 @@
     };
     let scriptTrigCl = () => {};
     let scriptIfrLd = () => {};
-    const scriptVars = {};
+    let scriptVars = {};
     const parse = (script) => {
+       let persVars = window.localStorage.persVars ? JSON.parse(window.localStorage.persVars) : {};
        let decls = script.split(`;`);
        let addThis = scriptCommands;
+       for(const [varName, val] of Object.entries(persVars)) {
+           scriptVars[varName] = val;
+       }
        decls = decls.filter(decl => decl !== ``)
                     .map(decl => {
                              let returnThis = decl.replaceAll(/\*.*\*/g, ``)
@@ -177,48 +181,95 @@
                                  else if(first) 
                                      return Math.floor(Math.random() * first);
                                  else return Math.random();
-                                 });
-                                 returnThis.matchAll(/\w+\s?=\s?.+/g).forEach(varStr => {
-                                     let [varName, val] = varStr[0].replaceAll(` `, ``).split(`=`);
-                                     scriptVars[varName] = Number.isNaN(+val) ? val : +val;
-                                 });
-                             return returnThis;
+                                 })
+                                     .replaceAll(`mins()`, new Date().getMinutes())
+                                     .replaceAll(`hrs()`, new Date().getHours())
+                                     .replaceAll(`secs()`, new Date().getSeconds())
+                                     .replaceAll(`histLast()`, ifrHistory[ifrHistory.length - 2])
+                                     .replaceAll(`src()`, ifr.src)
+                                     .replaceAll(/repeat\((\d+)\)\s+(.+)/g, 
+                                                (match, count, rest) => {
+                                                    let res = [];
+                                                    for(let i = 0; i < +count; i++) res.push(rest);
+                                                    return res.join(` & `);
+});
+
+                                 return returnThis;
                          });
-       for(const [varName, val] of Object.entries(scriptVars)) {
-           if(!(val.startsWith(`(`) && val.endsWith(`)`))) {
-               decls = decls.map(decl => decl.replaceAll(`$${varName}`, val));
-           } else {
-               decls = decls.map(decl => decl.replaceAll(new RegExp(`$${varName}\\([^)]+\\)`, `g`), text => val.split(` `)[+(text.split(`(`)[1].split(`)`)[0])]));
-           }
-       }
        decls.forEach((decl, ind) => {
            let parts = decl.split(`=>`);
            let [commandName, content] = parts.map(st => st.trim());
            addThis[commandName] = content;
            if(commandName === `ontrigclick`) {
                scriptTrigCl = () => {
-                   content.split(`+`).forEach(cmd => runCommand(cmd));
+                   content.split(`&`).forEach(cmd => runCommand(cmd));
                };
            }
            if(commandName === `onload`) {
                scriptIfrLd = () => {
-                   content.split(`+`).forEach(cmd => runCommand(cmd));
+                   content.split(`&`).forEach(cmd => runCommand(cmd));
                };
-           }
-           if(content.includes(`?`)) {
-               let decl = content;
-               let cond = decl.split(`?`)[0];
-               let theRest = decl.split(`?`).slice(1, decl.length).join(`?`);
-               let [trueAction, falseAction] = theRest.split(` else `);
-               if(eval(cond)) {
-                   addThis[commandName] = trueAction.trim();
-               } else if(falseAction) {
-                   addThis[commandName] = falseAction.trim();
-               }
            }
        });
        
        window.localStorage.scriptCommands = JSON.stringify(addThis);
+    };
+    const parse2 = (replacingObj = {}) => {
+        for(const [cmd, run] of Object.entries(scriptCommands)) {
+                let decls = run;
+                for(const [comp, repl] of Object.entries(replacingObj))
+                    decls = decls.replaceAll(comp, repl);
+                for(const [varName, val] of Object.entries(scriptVars)) {
+                    if(!(val.startsWith(`(`) && val.endsWith(`)`))) {
+                       decls = decls.replaceAll(`$${varName}`, val);
+                    } else {
+                        decls = decls.replaceAll(new RegExp(`$${varName}\\([^)]+\\)`, `g`), text => val.split(` `)[+(text.split(`(`)[1].split(`)`)[0])]);
+                }
+            }
+                  if(decls.includes(`?`)) {
+                      let cond = decls.split(`?`)[0];
+                      let theRest = decls.split(`?`).slice(1, decls.length).join(`?`);
+                      let [trueAction, falseAction] = theRest.split(` else `);
+                      if(eval(cond)) {
+                          decls = trueAction.trim();
+                      } else if(falseAction) {
+                          decls = falseAction.trim();
+                      }
+                   }
+                decls.split(`&`).forEach(cmd => {
+                  if(linkRegex.test(cmd)) {
+                      ifr.src = cmd;
+                      enabled = true;
+                      ifr.style.display = `block`;
+                  } else if(cmdRegex.test(cmd)) {
+                      runCommand(cmd);
+                  } else if(linkCmdRegex.test(cmd)) {
+                      const parts = cmd.split(` `);
+                      ifr.src = parts[0];
+                      enabled = true;
+                      ifr.style.display = `block`;
+                      runCommand(parts.slice(1, parts.length).join(` `));
+                  }
+                  if(cmd.startsWith(`al(`)) alert(cmd.slice(3, -1)); 
+                  [...cmd.matchAll(/(pers)? \w+\s?=\s?.+/g)].forEach(varStr => {
+                      let persVars = JSON.parse(window.localStorage.persVars || `{}`);
+                      let [varName, val] = varStr[0].split(`=`).map(s => s.trim());
+                      if(!(scriptVars[varName].includes(`+`) ||  
+                           scriptVars[varName].includes(`-`) ||
+                           scriptVars[varName].includes(`*`) ||
+                           scriptVars[varName].includes(`/`)))          
+                           scriptVars[varName] = Number.isNaN(+val) ? val : +val;
+                      else scriptVars[varName] = eval(val);
+                      if(varName.startsWith(`pers `)) {
+                          persVars = JSON.parse(window.localStorage.persVars);
+                          let persVarName = varName.slice(5);
+                 
+                          persVars[persVarName] = val;
+                          window.localStorage.persVars = JSON.stringify(persVars);
+                      }
+                  });
+                });
+            }
     };
     const runCommand = (text) => {
         if(text === `/cr`) {
@@ -403,6 +454,10 @@
             return;
         } else {
             for(const [cmd, run] of Object.entries(commands)) {
+                if(scriptCommands[cmd]) {
+                    parse2( {"##": `/`} );
+                    return;
+                }
                 if(text.split(` `)[0] === cmd) {
                     let runCopy = run;
                     text.split(` `).forEach((part, ind) => {
@@ -423,24 +478,7 @@
                     }
                 }
             }
-            for(const [cmd, run] of Object.entries(scriptCommands)) {
-                run.split(`+`).forEach(cmd => {
-                  if(linkRegex.test(cmd)) {
-                      ifr.src = cmd;
-                      enabled = true;
-                      ifr.style.display = `block`;
-                  } else if(cmdRegex.test(cmd)) {
-                      runCommand(cmd);
-                  } else if(linkCmdRegex.test(cmd)) {
-                      const parts = cmd.split(` `);
-                      ifr.src = parts[0];
-                      enabled = true;
-                      ifr.style.display = `block`;
-                      runCommand(parts.slice(1, parts.length).join(` `));
-                  }
-                  if(cmd.startsWith(`al(`)) alert(cmd.slice(3, -1)); 
-                });
-            }
+            parse2();
             linkIn.value = ``;
         }
     };
@@ -496,7 +534,7 @@
                     /* autocorrect */
                         .replaceAll(`..`, `.`)
                         .replaceAll(/\.(c|o|m){3}/g, `.com`)
-                        .replaceAll(/^w[:;]/, `https://`)
+                        .replaceAll(/^w[:;]/g, `https://`)
                         .replaceAll(/^https[:;][/\\]{2}/g, `https://`)
                         .replaceAll(`.oi`, `.io`)
                         .replaceAll(/\.(o|r|g){3}/g, `.org`);
